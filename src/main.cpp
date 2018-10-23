@@ -39,6 +39,7 @@ int main(int argc, char** argv)
     vpColVector d_tot(8);
 
     // wheels speed
+    // We do it for each wheel's upper and lower speed limit
     vpMatrix C_w(4, 4);
     C_w[0][0] = 1/wheel_rad; C_w[0][1] = base/wheel_rad;
     C_w[1][0] = -1/wheel_rad; C_w[1][1] = -base/wheel_rad;
@@ -48,6 +49,7 @@ int main(int argc, char** argv)
     d_w[0] = w_max; d_w[1] = w_max; d_w[2] = w_max; d_w[3] = w_max;
     
     // visibility
+    // Min and Max constraints for x and y
     vpMatrix C_v(4, 4);
     vpColVector d_v(4);
     vpColVector cam_lim(2);
@@ -75,17 +77,21 @@ int main(int argc, char** argv)
 
             // Creation of the current feature s
             robot.getImagePoint(s_ball); // get ball pose
-            s.buildFrom(s_ball[0], s_ball[1], 1);
-            L_x = s.interaction( vpBasicFeature::FEATURE_ALL );
+            s.buildFrom(s_ball[0], s_ball[1], 1); // get features
+            L_x = s.interaction( vpBasicFeature::FEATURE_ALL ); // calculate interaction matrix
             J_vq = robot.getCamJacobian();
 
+            // Repeating feature Jacobian for both min and max constraints of visibility
             ecn::putAt(C_v, L_x * J_vq, 0, 0);
             ecn::putAt(C_v, L_x * J_vq, 2, 0);
+            // Max constraints
             ecn::putAt(d_v, (cam_lim - s_ball) * alpha, 0);
+            // Min constraints
             ecn::putAt(d_v, -(-cam_lim - s_ball) * alpha, 2);
 
             A_t[0][0] = r[1]; A_t[0][1] = -r[0];
 
+            // combine all inequality constraints
             ecn::putAt(C_tot, C_w, 0, 0);
             ecn::putAt(C_tot, C_v, 4, 0);
             ecn::putAt(d_tot, d_w, 0);
